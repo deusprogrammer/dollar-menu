@@ -1,0 +1,230 @@
+import { useState, useCallback } from 'react';
+import ImageMasker from './components/ImageMasker';
+import RingHarness from './RingHarness';
+import './App.css';
+
+function App() {
+  const [svgContent, setSvgContent] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [svgName, setSvgName] = useState('');
+  const [imageName, setImageName] = useState('');
+
+  // URL input state
+  const [svgUrlInput, setSvgUrlInput] = useState('');
+  const [imageUrlInput, setImageUrlInput] = useState('');
+  const [svgUrlError, setSvgUrlError] = useState('');
+  const [imageUrlError, setImageUrlError] = useState('');
+  const [svgUrlLoading, setSvgUrlLoading] = useState(false);
+  const [imgInfo, setImgInfo] = useState(null);
+  const [mode, setMode] = useState('file');
+
+  const handleImgChange = useCallback((info) => setImgInfo(info), []);
+
+  // ── File handlers ──────────────────────────────────────────────────────
+
+  const handleSvgChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSvgName(file.name);
+    setSvgUrlInput('');
+    setSvgUrlError('');
+    const reader = new FileReader();
+    reader.onload = (ev) => setSvgContent(ev.target.result);
+    reader.readAsText(file);
+  }, []);
+
+  const handleImageChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageName(file.name);
+    setImageUrlInput('');
+    setImageUrlError('');
+    const url = URL.createObjectURL(file);
+    setImageUrl((prev) => {
+      if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+      return url;
+    });
+  }, []);
+
+  // ── URL handlers ───────────────────────────────────────────────────────
+
+  const handleSvgUrlLoad = useCallback(async () => {
+    const url = svgUrlInput.trim();
+    if (!url) return;
+    setSvgUrlError('');
+    setSvgUrlLoading(true);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      if (!text.includes('<svg') && !text.includes('<SVG')) {
+        throw new Error('Response does not appear to be an SVG file');
+      }
+      setSvgContent(text);
+      setSvgName(url.split('/').pop() || 'remote.svg');
+    } catch (err) {
+      setSvgUrlError(err.message || 'Failed to load SVG');
+    } finally {
+      setSvgUrlLoading(false);
+    }
+  }, [svgUrlInput]);
+
+  const handleImageUrlLoad = useCallback(() => {
+    const url = imageUrlInput.trim();
+    if (!url) return;
+    setImageUrlError('');
+    // Validate by attempting to create an Image element
+    const img = new Image();
+    img.onload = () => {
+      setImageUrl((prev) => {
+        if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+        return url;
+      });
+      setImageName(url.split('/').pop() || 'remote-image');
+    };
+    img.onerror = () => setImageUrlError('Failed to load image from URL');
+    img.src = url;
+  }, [imageUrlInput]);
+
+  const onSvgUrlKey = useCallback((e) => { if (e.key === 'Enter') handleSvgUrlLoad(); }, [handleSvgUrlLoad]);
+  const onImageUrlKey = useCallback((e) => { if (e.key === 'Enter') handleImageUrlLoad(); }, [handleImageUrlLoad]);
+
+  const isReady = Boolean(svgContent && imageUrl);
+
+  return (
+    <div className="app">
+      <nav className="mode-tabs">
+        <button
+          className={`mode-tab${mode === 'file' ? ' active' : ''}`}
+          onClick={() => setMode('file')}
+        >
+          File / URL
+        </button>
+        <button
+          className={`mode-tab${mode === 'ring' ? ' active' : ''}`}
+          onClick={() => setMode('ring')}
+        >
+          Ring Generator
+        </button>
+      </nav>
+
+      {mode === 'ring' ? <RingHarness /> : (
+        <>
+          <header className="toolbar">
+            <span className="toolbar-title">SVG Image Masker</span>
+            <div className="toolbar-controls">
+              {/* SVG source */}
+              <div className="source-group">
+                <label className="file-btn">
+                  <span className="file-btn-icon">⬡</span>
+                  {svgName || 'Load SVG…'}
+                  <input
+                    type="file"
+                    accept=".svg,image/svg+xml"
+                    onChange={handleSvgChange}
+                    hidden
+                  />
+                </label>
+                <span className="source-or">or</span>
+                <div className="url-field">
+                  <input
+                    className="url-input"
+                    type="url"
+                    placeholder="SVG URL…"
+                    value={svgUrlInput}
+                    onChange={(e) => { setSvgUrlInput(e.target.value); setSvgUrlError(''); }}
+                    onKeyDown={onSvgUrlKey}
+                  />
+                  <button
+                    className="url-load-btn"
+                    onClick={handleSvgUrlLoad}
+                    disabled={!svgUrlInput.trim() || svgUrlLoading}
+                  >
+                    {svgUrlLoading ? '…' : 'Load'}
+                  </button>
+                  {svgUrlError && <span className="url-error">{svgUrlError}</span>}
+                </div>
+              </div>
+
+              <div className="source-divider" />
+
+              {/* Image source */}
+              <div className="source-group">
+                <label className="file-btn">
+                  <span className="file-btn-icon">🖼</span>
+                  {imageName || 'Load Image…'}
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                    onChange={handleImageChange}
+                    hidden
+                  />
+                </label>
+                <span className="source-or">or</span>
+                <div className="url-field">
+                  <input
+                    className="url-input"
+                    type="url"
+                    placeholder="Image URL…"
+                    value={imageUrlInput}
+                    onChange={(e) => { setImageUrlInput(e.target.value); setImageUrlError(''); }}
+                    onKeyDown={onImageUrlKey}
+                  />
+                  <button
+                    className="url-load-btn"
+                    onClick={handleImageUrlLoad}
+                    disabled={!imageUrlInput.trim()}
+                  >
+                    Load
+                  </button>
+                  {imageUrlError && <span className="url-error">{imageUrlError}</span>}
+                </div>
+              </div>
+
+              {isReady && (
+                <>
+                  <span className="toolbar-hint">
+                    Drag image to reposition · handles to resize (hold Shift to stretch freely) · mask applies on release
+                  </span>
+                  {imgInfo && (
+                    <span className="img-readout">
+                      x&nbsp;<code>{imgInfo.x.toFixed(1)}</code>
+                      &ensp;y&nbsp;<code>{imgInfo.y.toFixed(1)}</code>
+                      &ensp;w&nbsp;<code>{imgInfo.w.toFixed(1)}</code>
+                      &ensp;h&nbsp;<code>{imgInfo.h.toFixed(1)}</code>
+                      {imgInfo.error && (
+                        <span className="readout-error" title={imgInfo.error}>&nbsp;⚠️ canvas export failed</span>
+                      )}
+                    </span>
+                  )}
+                  {imgInfo?.dataUrl && (
+                    <img
+                      className="preview-thumb"
+                      src={imgInfo.dataUrl}
+                      alt="masked preview"
+                      title="Masked output preview"
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          </header>
+
+          <main className="canvas-area">
+            {isReady ? (
+              <ImageMasker svgContent={svgContent} imageUrl={imageUrl} onChange={handleImgChange} />
+            ) : (
+              <div className="empty-state">
+                <div className="empty-icon">⬡</div>
+                <p>Load an <strong>SVG</strong> and a <strong>JPEG / PNG / WEBP</strong> to get started.</p>
+                <p className="empty-sub">Use a local file or paste a URL for either source.</p>
+              </div>
+            )}
+          </main>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default App;
