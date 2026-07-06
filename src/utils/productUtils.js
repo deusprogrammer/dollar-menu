@@ -38,7 +38,7 @@ export const getHighestPrice = (product) => {
 
 export const getRangeOfPrices = (product) => {
     if (!product.variations) {
-        return product.price;
+        return `$${product.price}`;
     }
 
     return `$${getLowestPrice(product)} -> $${getHighestPrice(product)}`;

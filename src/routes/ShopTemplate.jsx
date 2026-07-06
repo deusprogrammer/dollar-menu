@@ -16,8 +16,16 @@ const Shop = () => {
 
     return (
         <>
-            <div style={{display: 'flex', justifyContent: 'flex-end', padding: '10px'}}>
-                <Link to={`/shops/${id}/cart`}>Cart</Link>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px' }}>
+                <nav>
+                    <ul className="navbar-list">
+                        <li><Link to={`/shops/${id}`}>Home</Link></li>
+                        <li>|</li>
+                        <li><Link to={`/shops/${id}/cart`}>Cart</Link></li>
+                        <li>|</li>
+                        <li><Link to={`/shops/${id}/manage`}>Manage</Link></li>
+                    </ul>
+                </nav>
             </div>
             <Link to={`/shops/${id}`}>
                 <img src={shop?.bannerImageUrl} />

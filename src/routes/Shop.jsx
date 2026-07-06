@@ -4,7 +4,7 @@ import testData from '../test/testData';
 import ProductThumbnail from '../components/ProductThumbnail';
 import { capitalize } from '../utils/stringUtils';
 
-const Shop = () => {
+const Shop = ({ mode = 'view' }) => {
     const [shop, setShop] = useState();
     const {shopId: id} = useParams();
 
@@ -22,9 +22,9 @@ const Shop = () => {
                         <h2>{capitalize(category)}</h2>
                         <div style={{display: 'flex', gap: '5px', flexWrap: 'wrap', marginLeft: 'auto', width: '90%'}}>
                             {shop.products.filter((product) => product.category === category).map((product) => 
-                                <Link to={`/shops/${id}/products/${product.id}`}>
-                                    <ProductThumbnail product={product} />
-                                </Link>
+                                <>
+                                    <ProductThumbnail shopId={id} product={product} mode={mode} />
+                                </>
                             )}
                         </div>
                     </>

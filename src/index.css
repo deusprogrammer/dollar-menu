@@ -125,3 +125,13 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+.navbar-list {
+  display: flex;
+  flex-direction: row;
+  list-style-type: none;
+}
+
+.navbar-list > li {
+  padding: 0px 5px;
+}
